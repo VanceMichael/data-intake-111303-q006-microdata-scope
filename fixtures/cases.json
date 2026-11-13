@@ -1,0 +1,104 @@
+[
+  {
+    "name": "引用与嵌套实体分开",
+    "routes": [
+      {
+        "path": "/page",
+        "body": "<article itemscope itemtype=\"Instrument\" itemid=\"urn:ins:1\" itemref=\"extra\"><span itemprop=\"name\">湖站探头</span><div itemprop=\"manufacturer\" itemscope itemtype=\"Organization\"><span itemprop=\"address\">甲地</span></div><span itemprop=\"location\">乙地</span></article><div id=\"extra\"><a itemprop=\"manual\" href=\"./manual\">说明</a><span itemprop=\"tag category\">水质</span></div>",
+        "contentType": "text/html"
+      }
+    ],
+    "input": {
+      "pages": [
+        "/page"
+      ]
+    },
+    "expected": {
+      "entities": [
+        {
+          "id": "urn:ins:1",
+          "properties": {
+            "name": [
+              "湖站探头"
+            ],
+            "location": [
+              "乙地"
+            ],
+            "manual": [
+              "/manual"
+            ],
+            "tag": [
+              "水质"
+            ],
+            "category": [
+              "水质"
+            ]
+          }
+        }
+      ]
+    },
+    "required": [
+      "/page"
+    ]
+  },
+  {
+    "name": "同名节点不跨页面串联",
+    "routes": [
+      {
+        "path": "/one",
+        "body": "<div itemscope itemref=\"x\"><span itemprop=\"name\">一号</span></div><b id=\"x\" itemprop=\"tag\">甲</b>",
+        "contentType": "text/html"
+      },
+      {
+        "path": "/two",
+        "body": "<div itemscope itemref=\"x\"><span itemprop=\"name\">二号</span></div><b id=\"x\" itemprop=\"tag\">乙</b>",
+        "contentType": "text/html"
+      }
+    ],
+    "input": {
+      "pages": [
+        "/one",
+        "/two"
+      ]
+    },
+    "expected": {
+      "anonymousCount": 2,
+      "crossPageEdges": 0
+    },
+    "required": [
+      "/one",
+      "/two"
+    ]
+  },
+  {
+    "name": "重复引用只访问一次不丢多值",
+    "routes": [
+      {
+        "path": "/page",
+        "body": "<div itemscope itemid=\"urn:i\" itemref=\"x x\"><span itemprop=\"tag\">甲</span></div><div id=\"x\"><span itemprop=\"tag\">乙</span></div>",
+        "contentType": "text/html"
+      }
+    ],
+    "input": {
+      "pages": [
+        "/page"
+      ]
+    },
+    "expected": {
+      "entities": [
+        {
+          "id": "urn:i",
+          "properties": {
+            "tag": [
+              "甲",
+              "乙"
+            ]
+          }
+        }
+      ]
+    },
+    "required": [
+      "/page"
+    ]
+  }
+]
