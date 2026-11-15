@@ -12,7 +12,9 @@
     "inspect": "node src/inspect.mjs",
     "source": "node src/source.mjs",
     "acceptance": "node --test test/acceptance.test.mjs",
-    "demo": "node demo.mjs"
+    "test:workflow": "node --test test/workflow.test.mjs",
+    "demo": "node demo.mjs",
+    "demo:incremental": "node demo-incremental.mjs"
   },
   "dependencies": {
     "parse5": "7.2.1"

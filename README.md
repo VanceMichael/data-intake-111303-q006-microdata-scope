@@ -1,6 +1,6 @@
 # 嵌套微数据页面的实体边界采集
 
-这是 microdata-scope 的 Node.js 项目。现有能力是本地资料源启动、来源检查和接口演练；资料接收工作流由单独的业务模块承载，当前版本不含该模块。
+这是 microdata-scope 的 Node.js 项目。现有能力是本地资料源启动、来源检查和接口演练；资料接收工作流由 `src/workflow.mjs` 承载，微数据抽取与增量账本分别在 `src/microdata.mjs`、`src/ledger.mjs`。
 
 ## 环境
 
@@ -15,15 +15,16 @@ npm test
 npm run build
 npm run inspect
 npm run source
+npm run test:workflow
 ```
 
 `npm test` 检查已有资料源与接口读取。`npm run build` 做全部 JavaScript 源码语法检查，不生成运行时依赖。`npm run source` 启动回环服务并打印地址，`SOURCE_CASE=1 npm run source` 可切换异常场景。
 
 ## 工作流接入
 
-业务入口约定为 `src/workflow.mjs` 导出的异步 `run({ source, stateDir, input })`。source 是本地资料源地址，input 是业务输入，stateDir 是跨次执行保留的状态目录。调用结束返回结构化业务结果，并将相同结果持久化至 stateDir/result.json，其他持久状态布局由业务模块决定。不能依赖调用方持有的内存来完成恢复。
+业务入口约定为 `src/workflow.mjs` 导出的异步 `run({ source, stateDir, input })`。source 是本地资料源地址，input 是业务输入，stateDir 是跨次执行保留的状态目录。调用结束返回结构化业务结果，并将相同结果持久化至 stateDir/result.json。状态目录内还有 stateDir/ledger.json（增量贡献账本：每页一份可替换、可撤销的断言贡献）和 stateDir/snapshots/（原始页面快照，作为断言依据）。恢复只依赖这些已落盘状态，不依赖调用方持有的内存。
 
-input.pages 是来源路径。itemprop 在 meta 取 content、a/link 取 href、time 取 datetime，其他元素取文本；相对 URL 按页面基址解析。嵌套 itemscope 是实体关系而非父对象文本。entities 中 properties 各值均为数组，URL 输出本站绝对路径；匿名实体计 anonymousCount，跨页误连计 crossPageEdges。额外保留证据和关系字段。
+input.pages 是来源路径。itemprop 在 meta 取 content、a/link 取 href、time 取 datetime，其他元素取文本；相对 URL 按页面基址解析。嵌套 itemscope 是实体关系而非父对象文本。entities 中 properties 各值均为数组，URL 输出本站绝对路径；匿名实体计 anonymousCount，跨页误连计 crossPageEdges。额外保留证据和关系字段：evidence 记录每个值的页面、元素路径与源码位置，relations 给出实体间关系图。跨页相同 itemid 汇入同一实体，矛盾值作为带来源的断言并存；页面更正（重新抓取）只替换该页贡献，页面撤下（404/410）只撤销该页贡献，其他页仍支持的值与关系不受影响；读取失败不等于不存在，既有贡献保留并标记未刷新，且结果 complete 为 false。
 
 完整来源约定、输出示例与状态判定见 `docs/source-contract.md`。fixtures 下的资料只用于本地演练，代表不同供方响应或门户状态，不是资料接收器的实现。
 
@@ -32,8 +33,9 @@ input.pages 是来源路径。itemprop 在 meta 取 content、a/link 取 href、
 ```sh
 npm run acceptance
 npm run demo
+npm run demo:incremental
 ```
 
-业务模块接入后运行上述命令。当前版本运行会明确报告业务模块不存在，不把来源测试通过当作接收工作流已完成。acceptance 检查结果、落盘内容和实际来源访问；demo 从干净临时状态启动本地服务，实际执行前三种情况并完整输出结果及请求，不回放记录。每种情形应在 15 秒内完成，整次演示在 75 秒超时后报失败退出，预留在 90 秒内展示的余量。
+acceptance 检查结果、落盘内容和实际来源访问；demo 从干净临时状态启动本地服务，实际执行前三种情况并完整输出结果及请求，不回放记录。每种情形应在 15 秒内完成，整次演示在 75 秒超时后报失败退出，预留在 90 秒内展示的余量。demo:incremental 演示同一仪器跨页供稿时的矛盾并存、页面更正与撤下后的贡献撤销。
 
 容器内执行基线检查：`docker run --rm --network none microdata-scope:local npm test`。工作流开发完成后执行 `docker run --rm --network none microdata-scope:local npm run demo`。容器内回环端口可用；正式核对过程不连接外部网络。
